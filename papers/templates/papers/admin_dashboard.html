@@ -1,0 +1,451 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — Smart Conference Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'papers/styles.css' %}" />
+</head>
+<body>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner">
+    <a href="{% url 'index' %}" class="nav__brand" aria-label="SmartConf Home">
+      <div class="nav__brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4"   width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="7.5" width="8"  height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="11"  width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <circle cx="15" cy="14" r="3" stroke="#003366" stroke-width="1.5"/>
+          <path d="M17.2 16.2l1.8 1.8" stroke="#003366" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="nav__brand-name">Smart<span>Conf</span></span>
+    </a>
+    <button class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links" id="navLinks" role="list">
+      <li><a href="{% url 'index' %}">Home</a></li>
+      <li><a href="{% url 'admin_dashboard' %}" class="nav__cta active">Dashboard</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<div class="dash">
+<div class="container">
+
+  <!-- Alerts -->
+  <div class="alert alert-ok hidden" id="alertOk" role="status">
+    <span id="alertOkText">Operation completed successfully.</span>
+  </div>
+  <div class="alert alert-err hidden" id="alertErr" role="alert">
+    <span id="alertErrText">An error occurred. Please try again.</span>
+  </div>
+
+  <!-- Top bar -->
+  <div class="dash-topbar">
+    <div>
+      <div class="dash-topbar__breadcrumb">SmartConf &rsaquo; <span>Admin Dashboard</span></div>
+      <h1 class="dash-topbar__title">Paper Database</h1>
+    </div>
+    <div class="dash-topbar__right">
+      <div class="dash-user">
+        <strong>{{ request.user.username }}</strong>
+        Administrator
+      </div>
+      <a href="{% url 'index' %}" class="btn btn-outline" style="font-size:0.78rem;padding:8px 16px;">
+        &#8592; Search
+      </a>
+      <a href="{% url 'admin_logout' %}" class="btn btn-primary" style="font-size:0.78rem;padding:8px 16px;">
+        Sign Out
+      </a>
+    </div>
+  </div>
+
+  <div class="dash-divider"></div>
+
+  <!-- Stats (loaded via API) -->
+  <div class="stats-row" role="list">
+    <div class="stat-card" role="listitem">
+      <div class="stat-card__val" id="statPapers">…</div>
+      <div class="stat-card__label">Total Papers</div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-card__val" id="statConfs">…</div>
+      <div class="stat-card__label">Conferences</div>
+    </div>
+    <div class="stat-card" role="listitem">
+      <div class="stat-card__val" id="statIndexed">…</div>
+      <div class="stat-card__label">Indexed</div>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div class="panels-grid">
+
+    <!-- Panel A: File Upload -->
+    <div class="panel">
+      <div class="panel__head">
+        <div class="panel__head-icon" aria-hidden="true">&#128196;</div>
+        <div>
+          <div class="panel__head-title">Bulk Upload</div>
+          <div class="panel__head-sub">CSV &middot; JSON</div>
+        </div>
+      </div>
+      <div class="panel__body">
+        <div class="dropzone" id="dropZone" role="button" tabindex="0" aria-label="Click or drag file to upload">
+          <input type="file" id="fileInput" name="file" accept=".csv,.json" aria-label="Select file" />
+          <span class="dropzone__icon" aria-hidden="true">&#8679;</span>
+          <p class="dropzone__label"><strong>Click to browse</strong> or drag &amp; drop</p>
+          <p class="dropzone__hint">CSV &nbsp;&middot;&nbsp; JSON &nbsp;&middot;&nbsp; Max 10 MB</p>
+          <p class="dropzone__hint" style="margin-top:8px;font-size:0.65rem;">
+            CSV columns: title, authors, abstract, conference, year, doi_url(optional)
+          </p>
+        </div>
+
+        <div class="file-chip hidden" id="fileChip">
+          <span aria-hidden="true">&#128196;</span>
+          <span class="file-chip__name" id="chipName">filename.csv</span>
+          <button type="button" class="file-chip__rm" id="chipRm" aria-label="Remove file">&#xd7;</button>
+        </div>
+
+        <span class="field__error hidden" id="uploadErr" role="alert" style="margin-top:8px;display:block;"></span>
+
+        <button type="button" class="btn btn-primary btn-full" id="uploadBtn" style="margin-top:16px;" disabled>
+          Upload &amp; Import
+        </button>
+      </div>
+    </div>
+
+    <!-- Panel B: Manual Entry -->
+    <div class="panel">
+      <div class="panel__head">
+        <div class="panel__head-icon" aria-hidden="true">&#9998;</div>
+        <div>
+          <div class="panel__head-title">Manual Entry</div>
+          <div class="panel__head-sub">Add a single paper</div>
+        </div>
+      </div>
+      <div class="panel__body">
+        <div class="field">
+          <label class="field__label" for="pTitle">Paper Title</label>
+          <input class="field__input" type="text" id="pTitle" placeholder="Attention Is All You Need" maxlength="500" />
+          <span class="field__error hidden" id="pTitle-err" role="alert"></span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="pAuthors">Authors</label>
+          <input class="field__input" type="text" id="pAuthors" placeholder="A. Vaswani, N. Shazeer" maxlength="500" />
+          <span class="field__error hidden" id="pAuthors-err" role="alert"></span>
+        </div>
+        <div class="field">
+          <label class="field__label" for="pAbstract">Abstract</label>
+          <textarea class="field__textarea" id="pAbstract" placeholder="We propose a model…" rows="4" maxlength="5000"></textarea>
+          <span class="field__error hidden" id="pAbstract-err" role="alert"></span>
+        </div>
+        <div class="two-col">
+          <div class="field" style="margin-bottom:0;">
+            <label class="field__label" for="pConf">Conference</label>
+            <select class="field__input field__select" id="pConf">
+              <option value="">Select…</option>
+              <option>NeurIPS</option><option>ICML</option><option>ICLR</option>
+              <option>CVPR</option><option>ACL</option><option>EMNLP</option>
+              <option>AAAI</option><option>KDD</option><option>Other</option>
+            </select>
+            <span class="field__error hidden" id="pConf-err" role="alert"></span>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label class="field__label" for="pYear">Year</label>
+            <input class="field__input" type="number" id="pYear" placeholder="2024" min="1990" max="2030" />
+            <span class="field__error hidden" id="pYear-err" role="alert"></span>
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px;">
+          <label class="field__label" for="pDOI">
+            DOI / URL
+            <span style="font-weight:400;text-transform:none;font-size:0.6rem;color:var(--ink-30);">optional</span>
+          </label>
+          <input class="field__input" type="url" id="pDOI" placeholder="https://doi.org/10.xxxx/…" />
+        </div>
+        <button type="button" class="btn btn-gold btn-full" id="addBtn" style="margin-top:4px;">
+          Add Paper
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /panels-grid -->
+
+  <!-- Recent papers table -->
+  <div class="table-panel">
+    <div class="table-panel__head">
+      <span class="table-panel__title">Recently Added</span>
+      <span class="table-panel__count" id="tableCount">Loading…</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="data-table" aria-label="Recently added papers">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Conference</th>
+            <th>Year</th>
+            <th>Added</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="papersTbody">
+          <tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:24px;">Loading papers…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+</main>
+
+<footer role="contentinfo">
+  <span class="footer__brand">Smart<span>Conf</span></span>
+  <span class="footer__copy">© 2025 Smart Conference Assistant &nbsp;&middot;&nbsp; Admin dashboard</span>
+</footer>
+
+<script>
+  /* CSRF helper */
+  function getCsrf() {
+    return document.cookie.split(';').map(c => c.trim())
+      .find(c => c.startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  /* Mobile nav */
+  const navBurger = document.getElementById('navBurger');
+  const navLinks  = document.getElementById('navLinks');
+  navBurger.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    navBurger.setAttribute('aria-expanded', open);
+  });
+
+  /* ── Alerts ── */
+  let alertTimer;
+  function showAlert(type, msg) {
+    clearTimeout(alertTimer);
+    const ok  = document.getElementById('alertOk');
+    const err = document.getElementById('alertErr');
+    ok.classList.add('hidden'); err.classList.add('hidden');
+    if (type === 'ok') {
+      document.getElementById('alertOkText').textContent = msg;
+      ok.classList.remove('hidden');
+    } else {
+      document.getElementById('alertErrText').textContent = msg;
+      err.classList.remove('hidden');
+    }
+    alertTimer = setTimeout(() => { ok.classList.add('hidden'); err.classList.add('hidden'); }, 6000);
+  }
+
+  /* ── Load stats ── */
+  async function loadStats() {
+    try {
+      const res  = await fetch('/api/stats/');
+      const data = await res.json();
+      document.getElementById('statPapers').textContent  = data.total_papers.toLocaleString();
+      document.getElementById('statConfs').textContent   = data.total_conferences.toLocaleString();
+      document.getElementById('statIndexed').textContent = data.indexed.toLocaleString();
+    } catch (e) {
+      ['statPapers','statConfs','statIndexed'].forEach(id =>
+        document.getElementById(id).textContent = '–');
+    }
+  }
+
+  /* ── Load papers table ── */
+  async function loadPapers() {
+    try {
+      const res  = await fetch('/api/papers/');
+      const data = await res.json();
+      document.getElementById('tableCount').textContent =
+        `Showing ${Math.min(data.papers.length, 50)} of ${data.total} papers`;
+
+      const tbody = document.getElementById('papersTbody');
+      if (!data.papers.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:24px;">No papers yet. Add one above!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.papers.map(p => `
+        <tr id="row-${p.id}">
+          <td class="title-cell">${esc(p.title)}</td>
+          <td><span class="tag tag-conf">${esc(p.conference)}</span></td>
+          <td style="font-family:var(--mono);font-size:0.78rem;color:var(--ink-60);">${p.year}</td>
+          <td style="font-family:var(--mono);font-size:0.7rem;color:var(--ink-30);">${p.created_at}</td>
+          <td><button class="del-btn" type="button" onclick="deletePaper(${p.id}, '${esc(p.title.replace(/'/g,"\\x27"))}')">Delete</button></td>
+        </tr>`).join('');
+    } catch (e) {
+      document.getElementById('papersTbody').innerHTML =
+        '<tr><td colspan="5" style="text-align:center;color:var(--ink-30);padding:24px;">Failed to load papers.</td></tr>';
+    }
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  /* ── Delete paper ── */
+  async function deletePaper(id, title) {
+    if (!confirm(`Delete "${title}"?`)) return;
+    try {
+      const res = await fetch(`/api/papers/${id}/delete/`, {
+        method: 'DELETE',
+        headers: { 'X-CSRFToken': getCsrf() },
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById(`row-${id}`)?.remove();
+        showAlert('ok', data.message);
+        loadStats();
+      } else {
+        showAlert('err', data.error || 'Delete failed.');
+      }
+    } catch (e) {
+      showAlert('err', 'Network error.');
+    }
+  }
+
+  /* ── File upload ── */
+  const fileInput = document.getElementById('fileInput');
+  const dropZone  = document.getElementById('dropZone');
+  const fileChip  = document.getElementById('fileChip');
+  const chipName  = document.getElementById('chipName');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const uploadErr = document.getElementById('uploadErr');
+  const ALLOWED   = ['.csv', '.json'];
+
+  function handleFile(file) {
+    if (!file) return;
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (!ALLOWED.includes(ext)) {
+      uploadErr.textContent = 'Unsupported file type. Please upload CSV or JSON.';
+      uploadErr.classList.remove('hidden'); clearFile(); return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      uploadErr.textContent = 'File exceeds the 10 MB limit.';
+      uploadErr.classList.remove('hidden'); clearFile(); return;
+    }
+    chipName.textContent = file.name;
+    fileChip.classList.remove('hidden');
+    uploadBtn.disabled = false;
+    uploadErr.classList.add('hidden');
+  }
+
+  function clearFile() {
+    fileInput.value = '';
+    fileChip.classList.add('hidden');
+    uploadBtn.disabled = true;
+  }
+
+  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+  document.getElementById('chipRm').addEventListener('click', clearFile);
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('over'); });
+  dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('over');
+    const file = e.dataTransfer.files[0];
+    if (file) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; handleFile(file); }
+  });
+  dropZone.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+
+  uploadBtn.addEventListener('click', async () => {
+    if (!fileInput.files.length) return;
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    uploadBtn.textContent = 'Uploading…'; uploadBtn.disabled = true;
+    try {
+      const res  = await fetch('/api/papers/upload/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('ok', data.message);
+        clearFile();
+        loadPapers();
+        loadStats();
+      } else {
+        showAlert('err', data.error || 'Upload failed.');
+      }
+    } catch (e) {
+      showAlert('err', 'Network error during upload.');
+    } finally {
+      uploadBtn.textContent = 'Upload & Import';
+      uploadBtn.disabled    = !fileInput.files.length;
+    }
+  });
+
+  /* ── Manual entry ── */
+  document.getElementById('addBtn').addEventListener('click', async () => {
+    const fields = [
+      { id: 'pTitle',    errId: 'pTitle-err',    label: 'Paper title' },
+      { id: 'pAuthors',  errId: 'pAuthors-err',  label: 'Authors'     },
+      { id: 'pAbstract', errId: 'pAbstract-err', label: 'Abstract'    },
+      { id: 'pConf',     errId: 'pConf-err',     label: 'Conference'  },
+      { id: 'pYear',     errId: 'pYear-err',     label: 'Year'        },
+    ];
+    let valid = true;
+    fields.forEach(f => {
+      const el  = document.getElementById(f.id);
+      const err = document.getElementById(f.errId);
+      if (!el.value.trim()) {
+        err.textContent = `${f.label} is required.`;
+        err.classList.remove('hidden');
+        valid = false;
+      } else {
+        err.classList.add('hidden');
+      }
+    });
+    if (!valid) return;
+
+    const btn = document.getElementById('addBtn');
+    btn.textContent = 'Adding…'; btn.disabled = true;
+
+    try {
+      const res = await fetch('/api/papers/add/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify({
+          title:      document.getElementById('pTitle').value.trim(),
+          authors:    document.getElementById('pAuthors').value.trim(),
+          abstract:   document.getElementById('pAbstract').value.trim(),
+          conference: document.getElementById('pConf').value,
+          year:       document.getElementById('pYear').value,
+          doi_url:    document.getElementById('pDOI').value.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showAlert('ok', data.message);
+        ['pTitle','pAuthors','pAbstract','pConf','pYear','pDOI'].forEach(id =>
+          document.getElementById(id).value = '');
+        loadPapers();
+        loadStats();
+      } else {
+        showAlert('err', data.error || 'Failed to add paper.');
+      }
+    } catch (e) {
+      showAlert('err', 'Network error.');
+    } finally {
+      btn.textContent = 'Add Paper'; btn.disabled = false;
+    }
+  });
+
+  /* ── Init ── */
+  loadStats();
+  loadPapers();
+</script>
+
+</body>
+</html>

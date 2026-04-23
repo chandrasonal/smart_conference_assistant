@@ -1,0 +1,322 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Conference Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'papers/styles.css' %}">
+</head>
+<body>
+
+<!-- ── NAVIGATION ── -->
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner">
+    <a href="{% url 'index' %}" class="nav__brand" aria-label="SmartConf Home">
+      <div class="nav__brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4"   width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="7.5" width="8"  height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="11"  width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <circle cx="15" cy="14" r="3" stroke="#003366" stroke-width="1.5"/>
+          <path d="M17.2 16.2l1.8 1.8" stroke="#003366" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="nav__brand-name">Smart<span>Conf</span></span>
+    </a>
+    <button class="nav__burger" id="navBurger" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav__links" id="navLinks" role="list">
+      <li><a href="{% url 'index' %}" class="active">Home</a></li>
+      <li><a href="{% url 'admin_login' %}" class="nav__cta">Admin Login</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ── HERO & SEARCH ── -->
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__inner container">
+    <p class="hero__eyebrow">Semantic Paper Search</p>
+    <h1 class="hero__title" id="hero-title">
+      Discover research<br />that <em>truly resonates</em>
+    </h1>
+    <p class="hero__sub">
+      Describe any research topic in plain language. Our engine finds the most
+      relevant conference papers by meaning — not just keywords.
+    </p>
+
+    <!-- Search Box -->
+    <div class="search-box" role="search">
+      <div class="search-box__row">
+        <span class="search-box__icon" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+            <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M14 14l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <input class="search-box__input" type="text" id="searchInput"
+          placeholder="Describe a topic you are looking for..."
+          autocomplete="off" aria-label="Search query" />
+        <button class="search-box__go" id="searchBtn" type="button">Search</button>
+      </div>
+      <div class="search-box__filters">
+        <select class="search-filter" id="filterConf" aria-label="Filter by conference">
+          <option value="">All Conferences</option>
+          <option value="NeurIPS">NeurIPS</option>
+          <option value="ICML">ICML</option>
+          <option value="ICLR">ICLR</option>
+          <option value="CVPR">CVPR</option>
+          <option value="ACL">ACL</option>
+          <option value="EMNLP">EMNLP</option>
+          <option value="AAAI">AAAI</option>
+          <option value="KDD">KDD</option>
+        </select>
+        <select class="search-filter" id="filterYear" aria-label="Filter by year">
+          <option value="">All Years</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+          <option value="2022">2022</option>
+          <option value="2021">2021</option>
+          <option value="2020">2020</option>
+        </select>
+        <button class="search-clear" id="clearBtn" type="button">Clear</button>
+      </div>
+    </div>
+
+    <!-- Loading bar -->
+    <div class="load-bar hidden" id="loadBar" aria-live="polite" aria-label="Searching">
+      <div class="load-bar__fill"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── LLM ANSWER BOX ── -->
+<section class="llm-section hidden" id="llmSection">
+  <div class="container">
+    <div class="llm-box">
+      <div class="llm-box__header">
+        <span class="llm-box__icon">&#129302;</span>
+        <span class="llm-box__title">AI Summary</span>
+        <span class="llm-box__badge">Powered by Professor's LLM</span>
+      </div>
+      <div class="llm-box__body" id="llmBody"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── RESULTS ── -->
+<main>
+<section class="results-section" id="resultsSection" aria-labelledby="results-label">
+  <div class="container">
+
+    <div class="results-bar" id="resultsBar" style="display:none;">
+      <p class="results-count" id="results-label">
+        <strong id="resultNum">0</strong>
+        results for &ldquo;<span id="resultQuery"></span>&rdquo;
+      </p>
+      <div class="view-toggle" role="group" aria-label="View mode">
+        <button class="view-toggle__btn on" id="btnRanked" type="button" aria-pressed="true"  onclick="setView('ranked')">Ranked</button>
+        <button class="view-toggle__btn"    id="btnBest"   type="button" aria-pressed="false" onclick="setView('best')">Best Match</button>
+      </div>
+    </div>
+
+    <div class="papers-list" id="papersList" role="list"></div>
+
+    <!-- Empty state -->
+    <div class="empty-state hidden" id="emptyState" role="status">
+      <span class="empty-state__icon" aria-hidden="true">&#128270;</span>
+      <p class="empty-state__title">No papers found</p>
+      <p class="empty-state__sub">Try rephrasing your query or clearing the filters.</p>
+    </div>
+
+    <!-- Initial state -->
+    <div class="initial-state" id="initialState">
+      <span class="empty-state__icon" aria-hidden="true">&#128218;</span>
+      <p class="empty-state__title">Search for conference papers</p>
+      <p class="empty-state__sub">Type a research topic above and press Search.</p>
+    </div>
+
+  </div>
+</section>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer role="contentinfo">
+  <span class="footer__brand">Smart<span>Conf</span></span>
+  <span class="footer__copy">© 2025 Smart Conference Assistant &nbsp;&middot;&nbsp; Built for researchers</span>
+</footer>
+
+<!-- ── SCRIPTS ── -->
+<script>
+  /* Mobile nav */
+  const navBurger = document.getElementById('navBurger');
+  const navLinks  = document.getElementById('navLinks');
+  navBurger.addEventListener('click', () => {
+    const open = navLinks.classList.toggle('open');
+    navBurger.setAttribute('aria-expanded', open);
+  });
+  document.addEventListener('click', e => {
+    if (!navBurger.contains(e.target) && !navLinks.contains(e.target)) {
+      navLinks.classList.remove('open');
+      navBurger.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  /* ── Build a paper card from API data ── */
+  function buildCard(p, isBest) {
+    const num = String(p.rank).padStart(2, '0');
+    const doiLink = p.doi_url
+      ? `<a href="${escHtml(p.doi_url)}" class="paper-link" target="_blank" rel="noopener">View Paper &#8599;</a>`
+      : '';
+    const bestTag = isBest ? `<span class="tag tag-best">&#9733; Best Match</span>` : '';
+    const scoreStr = (p.score * 100).toFixed(1);
+    const wid = `why-${p.rank}`;
+    const wbid = `whybody-${p.rank}`;
+
+    return `
+    <article class="paper-card ${isBest ? 'best' : ''}" role="listitem" data-rank="${p.rank}" data-view="ranked">
+      <span class="paper-card__num" aria-label="Rank ${p.rank}">${num}</span>
+      <div class="paper-card__body">
+        <div class="paper-card__tags">
+          <span class="tag tag-conf">${escHtml(p.conference)}</span>
+          <span class="tag tag-year">${escHtml(String(p.year))}</span>
+          ${bestTag}
+        </div>
+        <h2 class="paper-card__title">${escHtml(p.title)}</h2>
+        <p class="paper-card__authors">${escHtml(p.authors)}</p>
+        <p class="paper-card__abstract">${escHtml(p.abstract)}</p>
+        <div class="paper-card__footer">
+          ${doiLink}
+          <button class="why-btn" id="${wid}" type="button" aria-expanded="false" aria-controls="${wbid}">
+            <span class="why-btn__arr" aria-hidden="true">&#9658;</span> Why this matches
+          </button>
+        </div>
+        <div class="why-body" id="${wbid}" role="region">
+          Semantic similarity score: <strong>${scoreStr}%</strong>. This paper was retrieved because its
+          abstract closely matches the meaning of your query using sentence-level embeddings.
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function escHtml(str) {
+    const d = document.createElement('div');
+    d.appendChild(document.createTextNode(str));
+    return d.innerHTML;
+  }
+
+  /* ── View toggle (ranked = all / best = only rank 1) ── */
+  let currentView = 'ranked';
+  function setView(mode) {
+    currentView = mode;
+    const r = document.getElementById('btnRanked');
+    const b = document.getElementById('btnBest');
+    if (mode === 'ranked') {
+      r.classList.add('on'); b.classList.remove('on');
+      r.setAttribute('aria-pressed','true'); b.setAttribute('aria-pressed','false');
+    } else {
+      b.classList.add('on'); r.classList.remove('on');
+      b.setAttribute('aria-pressed','true'); r.setAttribute('aria-pressed','false');
+    }
+    document.querySelectorAll('.paper-card').forEach(card => {
+      const rank = parseInt(card.dataset.rank);
+      card.style.display = (mode === 'best' && rank !== 1) ? 'none' : '';
+    });
+  }
+
+  /* ── Wire up why-match toggles dynamically ── */
+  function wireToggles() {
+    document.querySelectorAll('.why-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const body = document.getElementById(btn.getAttribute('aria-controls'));
+        const open = body.classList.toggle('open');
+        btn.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', open);
+      });
+    });
+  }
+
+  /* ── Main search function ── */
+  async function doSearch() {
+    const q    = document.getElementById('searchInput').value.trim();
+    const conf = document.getElementById('filterConf').value;
+    const year = document.getElementById('filterYear').value;
+    if (!q) return;
+
+    // Show loading
+    document.getElementById('loadBar').classList.remove('hidden');
+    document.getElementById('initialState').classList.add('hidden');
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('llmSection').classList.add('hidden');
+    document.getElementById('resultsBar').style.display = 'none';
+    document.getElementById('papersList').innerHTML = '';
+
+    const params = new URLSearchParams({ q, conference: conf, year });
+
+    try {
+      const res  = await fetch(`/api/search/?${params.toString()}`);
+      const data = await res.json();
+
+      document.getElementById('loadBar').classList.add('hidden');
+
+      if (!data.results || data.results.length === 0) {
+        document.getElementById('emptyState').classList.remove('hidden');
+        return;
+      }
+
+      // Render cards
+      const list = document.getElementById('papersList');
+      list.innerHTML = data.results.map((p, i) => buildCard(p, i === 0)).join('');
+      wireToggles();
+      setView(currentView);
+
+      // Update results bar
+      document.getElementById('resultNum').textContent   = data.results.length;
+      document.getElementById('resultQuery').textContent = q;
+      document.getElementById('resultsBar').style.display = '';
+
+      // Show LLM answer if present
+      if (data.llm_answer) {
+        const llmBody = document.getElementById('llmBody');
+        // Render newlines as paragraphs
+        llmBody.innerHTML = data.llm_answer
+          .split(/\n\n+/)
+          .map(para => `<p>${escHtml(para.trim()).replace(/\n/g, '<br>')}</p>`)
+          .join('');
+        document.getElementById('llmSection').classList.remove('hidden');
+      }
+
+    } catch (err) {
+      document.getElementById('loadBar').classList.add('hidden');
+      document.getElementById('emptyState').classList.remove('hidden');
+      console.error('Search error:', err);
+    }
+  }
+
+  document.getElementById('searchBtn').addEventListener('click', doSearch);
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  /* Clear */
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('filterConf').value  = '';
+    document.getElementById('filterYear').value  = '';
+    document.getElementById('papersList').innerHTML = '';
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('llmSection').classList.add('hidden');
+    document.getElementById('resultsBar').style.display = 'none';
+    document.getElementById('initialState').classList.remove('hidden');
+    document.getElementById('searchInput').focus();
+  });
+
+  document.getElementById('searchInput').focus();
+</script>
+
+</body>
+</html>

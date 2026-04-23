@@ -1,0 +1,90 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login — Smart Conference Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'papers/styles.css' %}" />
+</head>
+<body>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner">
+    <a href="{% url 'index' %}" class="nav__brand" aria-label="SmartConf Home">
+      <div class="nav__brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4"   width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="7.5" width="8"  height="1.5" rx="0.75" fill="#003366"/>
+          <rect x="2" y="11"  width="11" height="1.5" rx="0.75" fill="#003366"/>
+          <circle cx="15" cy="14" r="3" stroke="#003366" stroke-width="1.5"/>
+          <path d="M17.2 16.2l1.8 1.8" stroke="#003366" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="nav__brand-name">Smart<span>Conf</span></span>
+    </a>
+    <ul class="nav__links" id="navLinks" role="list">
+      <li><a href="{% url 'index' %}">Home</a></li>
+      <li><a href="{% url 'admin_login' %}" class="nav__cta active">Admin Login</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+  <div class="login-wrap" role="main">
+    <div class="login-card">
+
+      <div class="login-card__logo">
+        <div class="login-card__logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4"   width="11" height="1.5" rx="0.75" fill="#FFCC00"/>
+            <rect x="2" y="7.5" width="8"  height="1.5" rx="0.75" fill="#FFCC00"/>
+            <rect x="2" y="11"  width="11" height="1.5" rx="0.75" fill="#FFCC00"/>
+            <circle cx="15" cy="14" r="3" stroke="#FFCC00" stroke-width="1.5"/>
+            <path d="M17.2 16.2l1.8 1.8" stroke="#FFCC00" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="login-card__logo-name">Smart<span>Conf</span></span>
+      </div>
+
+      <h1 class="login-card__title">Administrator Login</h1>
+      <p class="login-card__sub">Sign in to manage the paper database.</p>
+
+      {% if error %}
+      <div class="alert alert-err" role="alert" style="margin-bottom:16px;">{{ error }}</div>
+      {% endif %}
+
+      <form method="post" action="{% url 'admin_login' %}" novalidate>
+        {% csrf_token %}
+        <div class="field">
+          <label class="field__label" for="username">Username</label>
+          <input class="field__input" type="text" id="username" name="username"
+            placeholder="admin" autocomplete="username" required autofocus />
+        </div>
+        <div class="field">
+          <label class="field__label" for="password">Password</label>
+          <input class="field__input" type="password" id="password" name="password"
+            placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:8px;">
+          Sign In
+        </button>
+      </form>
+
+      <p style="margin-top:20px;text-align:center;font-size:0.78rem;color:var(--ink-30);">
+        <a href="{% url 'index' %}" style="color:var(--ink-30);">&#8592; Back to search</a>
+      </p>
+    </div>
+  </div>
+</main>
+
+<footer role="contentinfo">
+  <span class="footer__brand">Smart<span>Conf</span></span>
+  <span class="footer__copy">© 2025 Smart Conference Assistant</span>
+</footer>
+
+</body>
+</html>
